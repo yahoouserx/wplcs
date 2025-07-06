@@ -112,8 +112,13 @@ class Admin_Panel {
             return;
         }
         
-        wp_enqueue_style('wplcs-admin', WPLCS_ASSETS_URL . 'css/admin.css', array(), WPLCS_VERSION);
-        wp_enqueue_script('wplcs-admin', WPLCS_ASSETS_URL . 'js/admin.js', array('jquery', 'wp-util'), WPLCS_VERSION, true);
+        // Enqueue modern theme system
+        wp_enqueue_style('wplcs-theme', WPLCS_ASSETS_URL . 'css/wplcs-theme.css', array(), WPLCS_VERSION);
+        wp_enqueue_style('wplcs-admin', WPLCS_ASSETS_URL . 'css/admin.css', array('wplcs-theme'), WPLCS_VERSION);
+        wp_enqueue_style('wplcs-dashboard', WPLCS_ASSETS_URL . 'css/dashboard.css', array('wplcs-theme'), WPLCS_VERSION);
+        
+        wp_enqueue_script('wplcs-theme', WPLCS_ASSETS_URL . 'js/wplcs-theme.js', array('jquery'), WPLCS_VERSION, true);
+        wp_enqueue_script('wplcs-admin', WPLCS_ASSETS_URL . 'js/admin.js', array('jquery', 'wp-util', 'wplcs-theme'), WPLCS_VERSION, true);
         
         wp_localize_script('wplcs-admin', 'wplcs_admin', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -122,7 +127,8 @@ class Admin_Panel {
                 'confirm_delete' => __('Are you sure you want to delete this?', 'wplcs'),
                 'loading' => __('Loading...', 'wplcs'),
                 'error' => __('An error occurred. Please try again.', 'wplcs'),
-                'success' => __('Action completed successfully.', 'wplcs')
+                'success' => __('Action completed successfully.', 'wplcs'),
+                'theme_switched' => __('Theme switched successfully', 'wplcs')
             )
         ));
     }
@@ -145,42 +151,167 @@ class Admin_Panel {
         $session_stats = $sessions->get_session_stats();
         
         ?>
-        <div class="wrap">
-            <h1><?php _e('WPLCS Dashboard', 'wplcs'); ?></h1>
+        <div class="wrap wplcs-dashboard-modern wplcs-theme-container">
+            <div class="wplcs-dashboard-header">
+                <div>
+                    <h1 class="wplcs-dashboard-title"><?php _e('WPLCS Dashboard', 'wplcs'); ?></h1>
+                    <p class="wplcs-dashboard-subtitle"><?php _e('WordPress License Control System', 'wplcs'); ?></p>
+                </div>
+                <div class="wplcs-dashboard-actions">
+                    <button class="wplcs-btn wplcs-btn-secondary" id="wplcs-refresh-dashboard" data-tooltip="<?php _e('Refresh Data', 'wplcs'); ?>">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <?php _e('Refresh', 'wplcs'); ?>
+                    </button>
+                </div>
+            </div>
             
-            <div class="wplcs-admin-stats">
-                <div class="wplcs-stat-boxes">
-                    <div class="wplcs-stat-box">
-                        <h3><?php echo intval($token_stats->total_tokens); ?></h3>
-                        <p><?php _e('Total Tokens', 'wplcs'); ?></p>
+            <div class="wplcs-stats-grid-modern">
+                <div class="wplcs-stat-card-modern wplcs-fade-in">
+                    <div class="wplcs-stat-header">
+                        <span class="wplcs-stat-label"><?php _e('Total Tokens', 'wplcs'); ?></span>
+                        <svg class="wplcs-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21,15 16,10 5,21"></polyline>
+                        </svg>
                     </div>
-                    <div class="wplcs-stat-box">
-                        <h3><?php echo intval($token_stats->active_tokens); ?></h3>
-                        <p><?php _e('Active Tokens', 'wplcs'); ?></p>
+                    <div class="wplcs-stat-value"><?php echo number_format(intval($token_stats->total_tokens)); ?></div>
+                    <div class="wplcs-stat-change positive">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        </svg>
+                        <?php _e('All time', 'wplcs'); ?>
                     </div>
-                    <div class="wplcs-stat-box">
-                        <h3><?php echo intval($session_stats->active_sessions); ?></h3>
-                        <p><?php _e('Active Sessions', 'wplcs'); ?></p>
+                </div>
+                
+                <div class="wplcs-stat-card-modern wplcs-fade-in">
+                    <div class="wplcs-stat-header">
+                        <span class="wplcs-stat-label"><?php _e('Active Tokens', 'wplcs'); ?></span>
+                        <svg class="wplcs-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6"></path>
+                            <path d="m9 9 3-3 3 3"></path>
+                            <path d="m9 15 3 3 3-3"></path>
+                        </svg>
                     </div>
-                    <div class="wplcs-stat-box">
-                        <h3><?php echo intval($session_stats->unique_domains); ?></h3>
-                        <p><?php _e('Unique Domains', 'wplcs'); ?></p>
+                    <div class="wplcs-stat-value"><?php echo number_format(intval($token_stats->active_tokens)); ?></div>
+                    <div class="wplcs-stat-change positive">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        </svg>
+                        <?php echo round(($token_stats->active_tokens / max($token_stats->total_tokens, 1)) * 100, 1); ?>% <?php _e('of total', 'wplcs'); ?>
+                    </div>
+                </div>
+                
+                <div class="wplcs-stat-card-modern wplcs-fade-in">
+                    <div class="wplcs-stat-header">
+                        <span class="wplcs-stat-label"><?php _e('Active Sessions', 'wplcs'); ?></span>
+                        <svg class="wplcs-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="wplcs-stat-value"><?php echo number_format(intval($session_stats->active_sessions)); ?></div>
+                    <div class="wplcs-stat-change positive">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <?php _e('Currently online', 'wplcs'); ?>
+                    </div>
+                </div>
+                
+                <div class="wplcs-stat-card-modern wplcs-fade-in">
+                    <div class="wplcs-stat-header">
+                        <span class="wplcs-stat-label"><?php _e('Unique Domains', 'wplcs'); ?></span>
+                        <svg class="wplcs-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                    </div>
+                    <div class="wplcs-stat-value"><?php echo number_format(intval($session_stats->unique_domains)); ?></div>
+                    <div class="wplcs-stat-change positive">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                        </svg>
+                        <?php _e('Registered', 'wplcs'); ?>
                     </div>
                 </div>
             </div>
             
-            <div class="wplcs-admin-widgets">
-                <div class="wplcs-widget">
-                    <h3><?php _e('Recent Activity', 'wplcs'); ?></h3>
-                    <?php $this->render_recent_activity(); ?>
+            <div class="wplcs-nav-tabs">
+                <button class="wplcs-nav-tab active" data-tab="recent-activity"><?php _e('Recent Activity', 'wplcs'); ?></button>
+                <button class="wplcs-nav-tab" data-tab="system-status"><?php _e('System Status', 'wplcs'); ?></button>
+                <button class="wplcs-nav-tab" data-tab="quick-stats"><?php _e('Quick Stats', 'wplcs'); ?></button>
+            </div>
+            
+            <div class="wplcs-tab-content">
+                <div class="wplcs-tab-panel active" id="recent-activity">
+                    <div class="wplcs-card">
+                        <div class="wplcs-card-header">
+                            <h3 class="wplcs-card-title"><?php _e('Recent Activity', 'wplcs'); ?></h3>
+                            <span class="wplcs-badge wplcs-badge-info">
+                                <span class="wplcs-badge-dot"></span>
+                                <?php _e('Live', 'wplcs'); ?>
+                            </span>
+                        </div>
+                        <?php $this->render_recent_activity(); ?>
+                    </div>
                 </div>
                 
-                <div class="wplcs-widget">
-                    <h3><?php _e('System Status', 'wplcs'); ?></h3>
-                    <?php $this->render_system_status(); ?>
+                <div class="wplcs-tab-panel" id="system-status">
+                    <div class="wplcs-card">
+                        <div class="wplcs-card-header">
+                            <h3 class="wplcs-card-title"><?php _e('System Status', 'wplcs'); ?></h3>
+                            <span class="wplcs-badge wplcs-badge-success">
+                                <span class="wplcs-badge-dot"></span>
+                                <?php _e('Healthy', 'wplcs'); ?>
+                            </span>
+                        </div>
+                        <?php $this->render_system_status(); ?>
+                    </div>
+                </div>
+                
+                <div class="wplcs-tab-panel" id="quick-stats">
+                    <div class="wplcs-card">
+                        <div class="wplcs-card-header">
+                            <h3 class="wplcs-card-title"><?php _e('Quick Statistics', 'wplcs'); ?></h3>
+                        </div>
+                        <?php $this->render_quick_stats(); ?>
+                    </div>
                 </div>
             </div>
         </div>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Tab functionality
+            $('.wplcs-nav-tab').on('click', function() {
+                const tabId = $(this).data('tab');
+                
+                $('.wplcs-nav-tab').removeClass('active');
+                $('.wplcs-tab-panel').removeClass('active');
+                
+                $(this).addClass('active');
+                $('#' + tabId).addClass('active');
+            });
+            
+            // Refresh functionality
+            $('#wplcs-refresh-dashboard').on('click', function() {
+                const $btn = $(this);
+                $btn.addClass('wplcs-loading');
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            });
+        });
+        </script>
         <?php
     }
     
@@ -421,12 +552,108 @@ class Admin_Panel {
         $database = new \WPLCS\Core\Database();
         $tables_exist = $database->tables_exist();
         
-        echo '<ul class="wplcs-status-list">';
-        echo '<li><span class="wplcs-status-indicator ' . ($tables_exist ? 'green' : 'red') . '"></span> ' . __('Database Tables', 'wplcs') . '</li>';
-        echo '<li><span class="wplcs-status-indicator ' . (class_exists('WooCommerce') ? 'green' : 'red') . '"></span> ' . __('WooCommerce', 'wplcs') . '</li>';
-        echo '<li><span class="wplcs-status-indicator ' . (version_compare(PHP_VERSION, '7.4', '>=') ? 'green' : 'red') . '"></span> ' . __('PHP Version', 'wplcs') . ' (' . PHP_VERSION . ')</li>';
-        echo '<li><span class="wplcs-status-indicator green"></span> ' . __('Plugin Version', 'wplcs') . ' (' . WPLCS_VERSION . ')</li>';
-        echo '</ul>';
+        echo '<div class="wplcs-status-grid">';
+        
+        // Database Status
+        echo '<div class="wplcs-status-item">';
+        echo '<div class="wplcs-status-header">';
+        echo '<span class="wplcs-badge ' . ($tables_exist ? 'wplcs-badge-success' : 'wplcs-badge-error') . '">';
+        echo '<span class="wplcs-badge-dot"></span>';
+        echo ($tables_exist ? __('Online', 'wplcs') : __('Offline', 'wplcs'));
+        echo '</span>';
+        echo '<span class="wplcs-status-label">' . __('Database Tables', 'wplcs') . '</span>';
+        echo '</div>';
+        echo '</div>';
+        
+        // WooCommerce Status
+        echo '<div class="wplcs-status-item">';
+        echo '<div class="wplcs-status-header">';
+        echo '<span class="wplcs-badge ' . (class_exists('WooCommerce') ? 'wplcs-badge-success' : 'wplcs-badge-error') . '">';
+        echo '<span class="wplcs-badge-dot"></span>';
+        echo (class_exists('WooCommerce') ? __('Active', 'wplcs') : __('Missing', 'wplcs'));
+        echo '</span>';
+        echo '<span class="wplcs-status-label">' . __('WooCommerce', 'wplcs') . '</span>';
+        echo '</div>';
+        echo '</div>';
+        
+        // PHP Version Status
+        echo '<div class="wplcs-status-item">';
+        echo '<div class="wplcs-status-header">';
+        echo '<span class="wplcs-badge ' . (version_compare(PHP_VERSION, '7.4', '>=') ? 'wplcs-badge-success' : 'wplcs-badge-warning') . '">';
+        echo '<span class="wplcs-badge-dot"></span>';
+        echo PHP_VERSION;
+        echo '</span>';
+        echo '<span class="wplcs-status-label">' . __('PHP Version', 'wplcs') . '</span>';
+        echo '</div>';
+        echo '</div>';
+        
+        // Plugin Version
+        echo '<div class="wplcs-status-item">';
+        echo '<div class="wplcs-status-header">';
+        echo '<span class="wplcs-badge wplcs-badge-info">';
+        echo '<span class="wplcs-badge-dot"></span>';
+        echo WPLCS_VERSION;
+        echo '</span>';
+        echo '<span class="wplcs-status-label">' . __('Plugin Version', 'wplcs') . '</span>';
+        echo '</div>';
+        echo '</div>';
+        
+        echo '</div>';
+    }
+    
+    /**
+     * Render quick stats
+     */
+    private function render_quick_stats() {
+        global $wpdb;
+        $database = new \WPLCS\Core\Database();
+        
+        // Get additional statistics
+        $tokens_table = $database->get_table('tokens');
+        $sessions_table = $database->get_table('sessions');
+        $logs_table = $database->get_table('logs');
+        
+        // Expired tokens count
+        $expired_tokens = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$tokens_table} WHERE expires_at < %s",
+            current_time('mysql')
+        ));
+        
+        // Sessions today
+        $sessions_today = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$sessions_table} WHERE DATE(created_at) = %s",
+            current_time('Y-m-d')
+        ));
+        
+        // Recent activities count
+        $recent_activities = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$logs_table} WHERE created_at >= %s",
+            date('Y-m-d H:i:s', strtotime('-24 hours'))
+        ));
+        
+        echo '<div class="wplcs-quick-stats-grid">';
+        
+        echo '<div class="wplcs-quick-stat">';
+        echo '<div class="wplcs-quick-stat-number">' . number_format($expired_tokens) . '</div>';
+        echo '<div class="wplcs-quick-stat-label">' . __('Expired Tokens', 'wplcs') . '</div>';
+        echo '</div>';
+        
+        echo '<div class="wplcs-quick-stat">';
+        echo '<div class="wplcs-quick-stat-number">' . number_format($sessions_today) . '</div>';
+        echo '<div class="wplcs-quick-stat-label">' . __('Sessions Today', 'wplcs') . '</div>';
+        echo '</div>';
+        
+        echo '<div class="wplcs-quick-stat">';
+        echo '<div class="wplcs-quick-stat-number">' . number_format($recent_activities) . '</div>';
+        echo '<div class="wplcs-quick-stat-label">' . __('Activities (24h)', 'wplcs') . '</div>';
+        echo '</div>';
+        
+        echo '<div class="wplcs-quick-stat">';
+        echo '<div class="wplcs-quick-stat-number">' . number_format(get_option('wplcs_total_requests', 0)) . '</div>';
+        echo '<div class="wplcs-quick-stat-label">' . __('Total API Requests', 'wplcs') . '</div>';
+        echo '</div>';
+        
+        echo '</div>';
     }
     
     /**

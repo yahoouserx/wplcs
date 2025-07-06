@@ -1,0 +1,329 @@
+/* WPLCS Admin Styles - WordPress Integration */
+
+/* Ensure proper integration with WordPress admin */
+.wplcs-admin-integration {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+}
+
+/* WordPress menu integration */
+#adminmenu .toplevel_page_wplcs .wp-menu-image:before {
+  content: '\f332';
+  font-family: dashicons;
+}
+
+#adminmenu .toplevel_page_wplcs.current .wp-menu-image:before,
+#adminmenu .toplevel_page_wplcs.wp-has-current-submenu .wp-menu-image:before {
+  color: #00a0d2;
+}
+
+/* Fix WordPress admin bar in dark mode */
+[data-theme="dark"] #wpadminbar {
+  background: #161b22 !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] #wpadminbar .ab-item,
+[data-theme="dark"] #wpadminbar a.ab-item,
+[data-theme="dark"] #wpadminbar > .menupop > .ab-item {
+  color: #c9d1d9 !important;
+}
+
+[data-theme="dark"] #wpadminbar .ab-top-menu > li:hover > .ab-item,
+[data-theme="dark"] #wpadminbar .ab-top-menu > li.hover > .ab-item {
+  background: #21262d !important;
+  color: #f0f6fc !important;
+}
+
+/* WordPress admin menu dark mode */
+[data-theme="dark"] #adminmenumain {
+  background: #161b22 !important;
+}
+
+[data-theme="dark"] #adminmenu,
+[data-theme="dark"] #adminmenu .wp-submenu,
+[data-theme="dark"] #adminmenuback,
+[data-theme="dark"] #adminmenuwrap {
+  background: #161b22 !important;
+}
+
+[data-theme="dark"] #adminmenu a {
+  color: #c9d1d9 !important;
+}
+
+[data-theme="dark"] #adminmenu .wp-has-current-submenu .wp-submenu a,
+[data-theme="dark"] #adminmenu .wp-has-current-submenu.opensub .wp-submenu a,
+[data-theme="dark"] #adminmenu .wp-submenu a {
+  color: #8b949e !important;
+}
+
+[data-theme="dark"] #adminmenu .wp-submenu a:focus,
+[data-theme="dark"] #adminmenu .wp-submenu a:hover,
+[data-theme="dark"] #adminmenu a:hover,
+[data-theme="dark"] #adminmenu li.menu-top:hover {
+  background: #21262d !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] #adminmenu .wp-has-current-submenu .wp-submenu .wp-submenu-head,
+[data-theme="dark"] #adminmenu .wp-menu-arrow,
+[data-theme="dark"] #adminmenu .wp-menu-arrow div,
+[data-theme="dark"] #adminmenu li.current a.menu-top,
+[data-theme="dark"] #adminmenu li.wp-has-current-submenu a.wp-has-current-submenu {
+  background: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+/* Content area dark mode */
+[data-theme="dark"] #wpbody {
+  background: #0d1117 !important;
+}
+
+[data-theme="dark"] #wpbody-content {
+  background: #0d1117 !important;
+}
+
+/* Footer dark mode */
+[data-theme="dark"] #wpfooter {
+  background: #161b22 !important;
+  border-top-color: #30363d !important;
+}
+
+[data-theme="dark"] #footer-thankyou,
+[data-theme="dark"] #wpfooter p {
+  color: #8b949e !important;
+}
+
+/* Forms and inputs dark mode integration */
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="tel"],
+[data-theme="dark"] input[type="range"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="month"],
+[data-theme="dark"] input[type="week"],
+[data-theme="dark"] input[type="time"],
+[data-theme="dark"] input[type="datetime"],
+[data-theme="dark"] input[type="datetime-local"],
+[data-theme="dark"] input[type="color"],
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: #161b22 !important;
+  border-color: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] input[type="text"]:focus,
+[data-theme="dark"] input[type="email"]:focus,
+[data-theme="dark"] input[type="url"]:focus,
+[data-theme="dark"] input[type="password"]:focus,
+[data-theme="dark"] input[type="search"]:focus,
+[data-theme="dark"] input[type="number"]:focus,
+[data-theme="dark"] input[type="tel"]:focus,
+[data-theme="dark"] input[type="range"]:focus,
+[data-theme="dark"] input[type="date"]:focus,
+[data-theme="dark"] input[type="month"]:focus,
+[data-theme="dark"] input[type="week"]:focus,
+[data-theme="dark"] input[type="time"]:focus,
+[data-theme="dark"] input[type="datetime"]:focus,
+[data-theme="dark"] input[type="datetime-local"]:focus,
+[data-theme="dark"] input[type="color"]:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #58a6ff !important;
+  box-shadow: 0 0 0 1px #58a6ff !important;
+}
+
+/* WordPress notices dark mode */
+[data-theme="dark"] .notice,
+[data-theme="dark"] .notice-alt {
+  background: #161b22 !important;
+  border-left-color: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] .notice-success {
+  border-left-color: #56d364 !important;
+}
+
+[data-theme="dark"] .notice-warning {
+  border-left-color: #f1c40f !important;
+}
+
+[data-theme="dark"] .notice-error {
+  border-left-color: #f85149 !important;
+}
+
+[data-theme="dark"] .notice-info {
+  border-left-color: #58a6ff !important;
+}
+
+/* Metaboxes dark mode */
+[data-theme="dark"] .postbox,
+[data-theme="dark"] .stuffbox {
+  background: #161b22 !important;
+  border-color: #30363d !important;
+}
+
+[data-theme="dark"] .postbox .hndle,
+[data-theme="dark"] .stuffbox .hndle {
+  background: #21262d !important;
+  border-bottom-color: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+/* Tables dark mode */
+[data-theme="dark"] .wp-list-table {
+  background: #161b22 !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] .wp-list-table th {
+  background: #21262d !important;
+  border-color: #30363d !important;
+  color: #c9d1d9 !important;
+}
+
+[data-theme="dark"] .wp-list-table td {
+  border-color: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] .wp-list-table tbody tr:hover {
+  background: #21262d !important;
+}
+
+[data-theme="dark"] .wp-list-table .alternate {
+  background: #0d1117 !important;
+}
+
+/* Buttons dark mode integration */
+[data-theme="dark"] .button,
+[data-theme="dark"] .button-secondary {
+  background: #21262d !important;
+  border-color: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+[data-theme="dark"] .button:hover,
+[data-theme="dark"] .button-secondary:hover {
+  background: #30363d !important;
+  border-color: #6e7681 !important;
+}
+
+[data-theme="dark"] .button-primary {
+  background: #58a6ff !important;
+  border-color: #58a6ff !important;
+  color: #0d1117 !important;
+}
+
+[data-theme="dark"] .button-primary:hover {
+  background: #79c0ff !important;
+  border-color: #79c0ff !important;
+}
+
+/* Spinner dark mode */
+[data-theme="dark"] .spinner {
+  filter: invert(1);
+}
+
+/* Media queries for responsive behavior */
+@media screen and (max-width: 782px) {
+  .wplcs-theme-toggle {
+    position: static !important;
+    margin: 10px;
+    transform: none !important;
+  }
+  
+  .wplcs-dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .wplcs-dashboard-actions {
+    margin-top: 1rem;
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .wplcs-stats-grid-modern {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .wplcs-nav-tabs {
+    flex-direction: column;
+  }
+  
+  .wplcs-quick-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .wplcs-status-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Accessibility improvements */
+.wplcs-btn:focus,
+.wplcs-nav-tab:focus,
+.wplcs-theme-toggle:focus {
+  outline: 2px solid #58a6ff;
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .wplcs-btn:focus,
+[data-theme="dark"] .wplcs-nav-tab:focus,
+[data-theme="dark"] .wplcs-theme-toggle:focus {
+  outline-color: #79c0ff;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --wplcs-border-primary: #000000;
+    --wplcs-text-primary: #000000;
+  }
+  
+  [data-theme="dark"] {
+    --wplcs-border-primary: #ffffff;
+    --wplcs-text-primary: #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .wplcs-fade-in,
+  .wplcs-slide-in {
+    animation: none !important;
+  }
+}
+
+/* Print optimizations */
+@media print {
+  [data-theme="dark"] * {
+    background: white !important;
+    color: black !important;
+    border-color: black !important;
+  }
+  
+  .wplcs-theme-toggle,
+  .wplcs-dashboard-actions,
+  .wplcs-nav-tabs,
+  #adminmenumain,
+  #wpadminbar {
+    display: none !important;
+  }
+}
