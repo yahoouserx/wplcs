@@ -1,6 +1,9 @@
 jQuery(document).ready(function($) {
     'use strict';
     
+    // Initialize theme system for frontend
+    initFrontendTheme();
+    
     // Copy token to clipboard
     $(document).on('click', '.wplcs-copy-token', function(e) {
         e.preventDefault();
@@ -138,8 +141,15 @@ jQuery(document).ready(function($) {
         });
     });
     
-    // Show notification
+    // Show notification - Enhanced for theme system
     function showNotice(message, type) {
+        // Use modern notification system if available
+        if (window.wplcs && window.wplcs.notify) {
+            window.wplcs.notify(message, type);
+            return;
+        }
+        
+        // Fallback to traditional notice
         var $notice = $('<div class="wplcs-notice wplcs-notice-' + type + ' wplcs-notice-dismissible">' +
             '<p>' + message + '</p>' +
             '<button type="button" class="wplcs-notice-dismiss">&times;</button>' +
@@ -183,6 +193,51 @@ jQuery(document).ready(function($) {
     adjustGridColumns();
     $(window).on('resize', adjustGridColumns);
 });
+
+// Initialize frontend theme system
+function initFrontendTheme() {
+    // Apply saved theme preference or system preference
+    var savedTheme = localStorage.getItem('wplcs-theme-preference');
+    var systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+    
+    // Apply theme to theme container
+    var $themeContainer = $('.wplcs-theme-container');
+    if ($themeContainer.length) {
+        $themeContainer.attr('data-theme', theme);
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+    
+    // Listen for theme changes from main theme system
+    $(document).on('wplcs:themeChanged', function(event, newTheme) {
+        $themeContainer.attr('data-theme', newTheme);
+    });
+    
+    // Add theme toggle if not present (optional for frontend)
+    if (window.wplcsTheme && typeof window.wplcsTheme.getCurrentTheme === 'function') {
+        // Theme system is available, let it handle everything
+        return;
+    }
+    
+    // Simple theme toggle for standalone frontend use
+    var $toggleButton = $('<button class="wplcs-theme-toggle-simple" style="position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 10px; border: none; border-radius: 5px; background: var(--wplcs-primary); color: var(--wplcs-text-inverse); cursor: pointer;">🌓</button>');
+    $('body').append($toggleButton);
+    
+    $toggleButton.on('click', function() {
+        var currentTheme = $themeContainer.attr('data-theme');
+        var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        $themeContainer.attr('data-theme', newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+        
+        // Save preference
+        try {
+            localStorage.setItem('wplcs-theme-preference', newTheme);
+        } catch (e) {
+            console.warn('Could not save theme preference');
+        }
+    });
+}
 
 // Copy to clipboard fallback for older browsers
 if (!document.execCommand) {

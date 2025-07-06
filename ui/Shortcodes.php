@@ -29,8 +29,13 @@ class Shortcodes {
      */
     public function enqueue_frontend_assets() {
         if (is_user_logged_in() && $this->is_wplcs_shortcode_page()) {
-            wp_enqueue_style('wplcs-frontend', WPLCS_PLUGIN_URL . 'assets/dashboard.css', array(), WPLCS_VERSION);
-            wp_enqueue_script('wplcs-frontend', WPLCS_PLUGIN_URL . 'assets/shortcode.js', array('jquery'), WPLCS_VERSION, true);
+            // Enqueue modern theme system for frontend
+            wp_enqueue_style('wplcs-theme-frontend', WPLCS_ASSETS_URL . 'css/wplcs-theme.css', array(), WPLCS_VERSION);
+            wp_enqueue_style('wplcs-frontend', WPLCS_ASSETS_URL . 'css/wplcs-frontend.css', array('wplcs-theme-frontend'), WPLCS_VERSION);
+            wp_enqueue_style('wplcs-dashboard', WPLCS_ASSETS_URL . 'css/dashboard.css', array('wplcs-theme-frontend'), WPLCS_VERSION);
+            
+            wp_enqueue_script('wplcs-theme-frontend', WPLCS_ASSETS_URL . 'js/wplcs-theme.js', array('jquery'), WPLCS_VERSION, true);
+            wp_enqueue_script('wplcs-frontend', WPLCS_ASSETS_URL . 'js/shortcode.js', array('jquery', 'wplcs-theme-frontend'), WPLCS_VERSION, true);
             
             wp_localize_script('wplcs-frontend', 'wplcs_ajax', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
@@ -82,6 +87,7 @@ class Shortcodes {
         
         ob_start();
         ?>
+        <div class="wplcs-theme-container" data-theme="light">
         <div class="wplcs-account-dashboard" data-columns="<?php echo esc_attr($atts['columns']); ?>">
             <div class="wplcs-dashboard-header">
                 <h3><?php _e('Your Licenses & Sites', 'wplcs'); ?></h3>
@@ -112,6 +118,7 @@ class Shortcodes {
             <?php if ($atts['show_upgrades'] === 'yes'): ?>
                 <?php $this->render_upgrade_section($user_tokens); ?>
             <?php endif; ?>
+        </div>
         </div>
         <?php
         
