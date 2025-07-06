@@ -156,27 +156,13 @@ class Tokens {
     /**
      * Get user tokens
      */
-    public function get_user_tokens($user_id, $active_only = true) {
+    public function get_user_tokens($user_id) {
         global $wpdb;
-        $table = $this->database->get_table('tokens');
-        
-        $where_clause = "t.user_id = %d";
-        $params = array($user_id);
-        
-        if ($active_only) {
-            $where_clause .= " AND t.is_active = 1 AND t.expires_at > %s";
-            $params[] = current_time('mysql');
-        }
+        $tokens_table = $this->database->get_table('tokens');
         
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT t.*, tier.name as tier_name, tier.features,
-                    (SELECT COUNT(*) FROM {$this->database->get_table('sessions')} s 
-                     WHERE s.token_id = t.id AND s.is_active = 1) as active_sessions
-             FROM {$table} t
-             JOIN {$this->database->get_table('tiers')} tier ON t.tier_id = tier.id
-             WHERE {$where_clause}
-             ORDER BY t.created_at DESC",
-            $params
+            "SELECT * FROM {$tokens_table} WHERE user_id = %d AND is_active = 1 ORDER BY created_at DESC",
+            $user_id
         ));
     }
     
@@ -282,23 +268,23 @@ class Tokens {
      */
     public function get_tier($tier_id) {
         global $wpdb;
-        $table = $this->database->get_table('tiers');
+        $tiers_table = $this->database->get_table('tiers');
         
         return $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE id = %d AND is_active = 1",
+            "SELECT * FROM {$tiers_table} WHERE id = %d",
             $tier_id
         ));
     }
     
     /**
-     * Get all active tiers
+     * Get all tiers
      */
     public function get_tiers() {
         global $wpdb;
-        $table = $this->database->get_table('tiers');
+        $tiers_table = $this->database->get_table('tiers');
         
         return $wpdb->get_results(
-            "SELECT * FROM {$table} WHERE is_active = 1 ORDER BY sort_order, price ASC"
+            "SELECT * FROM {$tiers_table} ORDER BY sort_order ASC, price ASC"
         );
     }
     
@@ -406,5 +392,79 @@ class Tokens {
         ));
         
         return $stats;
+    }
+    
+    /**
+     * Get available upgrade tiers for user
+     */
+    public function get_available_upgrade_tiers($user_tokens) {
+        global $wpdb;
+        $tiers_table = $this->database->get_table('tiers');
+        
+        // Get user's current highest tier
+        $current_tier_ids = array();
+        foreach ($user_tokens as $token) {
+            $current_tier_ids[] = $token->tier_id;
+        }
+        
+        if (empty($current_tier_ids)) {
+            // User has no tokens, show all tiers
+            return $wpdb->get_results(
+                "SELECT * FROM {$tiers_table} WHERE is_active = 1 ORDER BY price ASC"
+            );
+        }
+        
+        // Get tiers with higher price than current ones
+        $current_tier_ids_str = implode(',', array_map('intval', $current_tier_ids));
+        $max_price = $wpdb->get_var(
+            "SELECT MAX(price) FROM {$tiers_table} WHERE id IN ({$current_tier_ids_str})"
+        );
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$tiers_table} WHERE is_active = 1 AND price > %f ORDER BY price ASC",
+            $max_price ?: 0
+        ));
+    }
+    
+    /**
+     * Regenerate token
+     */
+    public function regenerate_token($token_id, $user_id = null) {
+        global $wpdb;
+        $tokens_table = $this->database->get_table('tokens');
+        
+        // Verify token belongs to user if user_id provided
+        if ($user_id) {
+            $token = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$tokens_table} WHERE id = %d AND user_id = %d",
+                $token_id, $user_id
+            ));
+            
+            if (!$token) {
+                return false;
+            }
+        }
+        
+        // Generate new token
+        $new_token = $this->generate_token_hash();
+        
+        $updated = $wpdb->update(
+            $tokens_table,
+            array(
+                'token_hash' => $new_token,
+                'updated_at' => current_time('mysql')
+            ),
+            array('id' => $token_id),
+            array('%s', '%s'),
+            array('%d')
+        );
+        
+        if ($updated) {
+            // Log the regeneration
+            $this->log_action($user_id ?: 0, 'token_regenerated', null, 200, $token_id);
+            return $new_token;
+        }
+        
+        return false;
     }
 }

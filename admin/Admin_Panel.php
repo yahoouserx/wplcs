@@ -583,4 +583,514 @@ class Admin_Panel {
             wp_send_json_error(__('Failed to update token status.', 'wplcs'));
         }
     }
+    
+    /**
+     * Render sessions list
+     */
+    private function render_sessions_list() {
+        global $wpdb;
+        $database = new \WPLCS\Core\Database();
+        $sessions_table = $database->get_table('sessions');
+        $tokens_table = $database->get_table('tokens');
+        $tiers_table = $database->get_table('tiers');
+        
+        // Get filter values
+        $user_filter = isset($_GET['user_filter']) ? sanitize_text_field($_GET['user_filter']) : '';
+        $status_filter = isset($_GET['status_filter']) ? sanitize_text_field($_GET['status_filter']) : '';
+        
+        // Build query
+        $where_clauses = array('1=1');
+        $params = array();
+        
+        if ($user_filter) {
+            $where_clauses[] = "(u.user_login LIKE %s OR u.display_name LIKE %s)";
+            $params[] = '%' . $user_filter . '%';
+            $params[] = '%' . $user_filter . '%';
+        }
+        
+        if ($status_filter === 'active') {
+            $where_clauses[] = "s.is_active = 1 AND s.expires_at > %s";
+            $params[] = current_time('mysql');
+        } elseif ($status_filter === 'expired') {
+            $where_clauses[] = "s.expires_at <= %s";
+            $params[] = current_time('mysql');
+        }
+        
+        $where_clause = implode(' AND ', $where_clauses);
+        
+        $sessions = $wpdb->get_results($wpdb->prepare(
+            "SELECT s.*, t.user_id, tier.name as tier_name, u.user_login, u.display_name
+             FROM {$sessions_table} s
+             JOIN {$tokens_table} t ON s.token_id = t.id
+             JOIN {$tiers_table} tier ON t.tier_id = tier.id
+             JOIN {$wpdb->users} u ON t.user_id = u.ID
+             WHERE {$where_clause}
+             ORDER BY s.last_activity DESC
+             LIMIT 100",
+            $params
+        ));
+        
+        ?>
+        <div class="wrap">
+            <h1><?php _e('Session Management', 'wplcs'); ?></h1>
+            
+            <!-- Filters -->
+            <div class="wplcs-filters">
+                <form method="get">
+                    <input type="hidden" name="page" value="wplcs-sessions" />
+                    
+                    <input type="search" name="user_filter" placeholder="<?php _e('Search users...', 'wplcs'); ?>" 
+                           value="<?php echo esc_attr($user_filter); ?>" />
+                    
+                    <select name="status_filter">
+                        <option value=""><?php _e('All Sessions', 'wplcs'); ?></option>
+                        <option value="active" <?php selected($status_filter, 'active'); ?>><?php _e('Active', 'wplcs'); ?></option>
+                        <option value="expired" <?php selected($status_filter, 'expired'); ?>><?php _e('Expired', 'wplcs'); ?></option>
+                    </select>
+                    
+                    <input type="submit" class="button" value="<?php _e('Filter', 'wplcs'); ?>" />
+                    <?php if ($user_filter || $status_filter): ?>
+                        <a href="<?php echo admin_url('admin.php?page=wplcs-sessions'); ?>" class="button"><?php _e('Clear', 'wplcs'); ?></a>
+                    <?php endif; ?>
+                </form>
+            </div>
+            
+            <!-- Sessions Table -->
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th><?php _e('User', 'wplcs'); ?></th>
+                        <th><?php _e('Domain', 'wplcs'); ?></th>
+                        <th><?php _e('Tier', 'wplcs'); ?></th>
+                        <th><?php _e('IP Address', 'wplcs'); ?></th>
+                        <th><?php _e('Status', 'wplcs'); ?></th>
+                        <th><?php _e('Last Activity', 'wplcs'); ?></th>
+                        <th><?php _e('Expires', 'wplcs'); ?></th>
+                        <th><?php _e('Actions', 'wplcs'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($sessions)): ?>
+                        <tr>
+                            <td colspan="8"><?php _e('No sessions found.', 'wplcs'); ?></td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($sessions as $session): ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo esc_html($session->display_name); ?></strong><br />
+                                    <small><?php echo esc_html($session->user_login); ?></small>
+                                </td>
+                                <td><?php echo esc_html($session->node_domain); ?></td>
+                                <td><?php echo esc_html($session->tier_name); ?></td>
+                                <td><?php echo esc_html($session->node_ip); ?></td>
+                                <td>
+                                    <?php if ($session->is_active && strtotime($session->expires_at) > time()): ?>
+                                        <span class="wplcs-status active"><?php _e('Active', 'wplcs'); ?></span>
+                                    <?php else: ?>
+                                        <span class="wplcs-status expired"><?php _e('Expired', 'wplcs'); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo human_time_diff(strtotime($session->last_activity), time()) . ' ' . __('ago', 'wplcs'); ?></td>
+                                <td><?php echo date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($session->expires_at)); ?></td>
+                                <td>
+                                    <?php if ($session->is_active): ?>
+                                        <button type="button" class="button button-small button-danger wplcs-deactivate-session" 
+                                                data-session-id="<?php echo $session->id; ?>">
+                                            <?php _e('Deactivate', 'wplcs'); ?>
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render tiers list
+     */
+    private function render_tiers_list() {
+        global $wpdb;
+        $database = new \WPLCS\Core\Database();
+        $tiers_table = $database->get_table('tiers');
+        
+        $tiers = $wpdb->get_results("SELECT * FROM {$tiers_table} ORDER BY sort_order ASC");
+        
+        ?>
+        <div class="wrap">
+            <h1>
+                <?php _e('License Tiers', 'wplcs'); ?>
+                <a href="<?php echo admin_url('admin.php?page=wplcs-tiers&action=new'); ?>" class="page-title-action">
+                    <?php _e('Add New Tier', 'wplcs'); ?>
+                </a>
+            </h1>
+            
+            <div class="wplcs-tiers-grid">
+                <?php foreach ($tiers as $tier): ?>
+                    <div class="wplcs-tier-card <?php echo $tier->is_active ? 'active' : 'inactive'; ?>">
+                        <div class="wplcs-tier-header">
+                            <h3><?php echo esc_html($tier->name); ?></h3>
+                            <span class="wplcs-tier-status <?php echo $tier->is_active ? 'active' : 'inactive'; ?>">
+                                <?php echo $tier->is_active ? __('Active', 'wplcs') : __('Inactive', 'wplcs'); ?>
+                            </span>
+                        </div>
+                        
+                        <div class="wplcs-tier-details">
+                            <div class="wplcs-tier-price">
+                                <?php echo $tier->price > 0 ? wc_price($tier->price) : __('Free', 'wplcs'); ?>
+                            </div>
+                            
+                            <ul class="wplcs-tier-features">
+                                <li><strong><?php _e('Max Sites:', 'wplcs'); ?></strong> 
+                                    <?php echo $tier->max_nodes == -1 ? __('Unlimited', 'wplcs') : $tier->max_nodes; ?>
+                                </li>
+                                <li><strong><?php _e('Duration:', 'wplcs'); ?></strong> 
+                                    <?php echo human_time_diff(0, $tier->duration); ?>
+                                </li>
+                                <li><strong><?php _e('Trial:', 'wplcs'); ?></strong> 
+                                    <?php echo $tier->is_trial ? __('Yes', 'wplcs') : __('No', 'wplcs'); ?>
+                                </li>
+                                <?php
+                                $features = json_decode($tier->features, true);
+                                if ($features && is_array($features)):
+                                    foreach ($features as $feature):
+                                ?>
+                                    <li><?php echo esc_html(ucwords(str_replace('_', ' ', $feature))); ?></li>
+                                <?php
+                                    endforeach;
+                                endif;
+                                ?>
+                            </ul>
+                        </div>
+                        
+                        <div class="wplcs-tier-actions">
+                            <a href="<?php echo admin_url('admin.php?page=wplcs-tiers&action=edit&id=' . $tier->id); ?>" 
+                               class="button button-primary"><?php _e('Edit', 'wplcs'); ?></a>
+                            
+                            <button type="button" class="button wplcs-toggle-tier" 
+                                    data-tier-id="<?php echo $tier->id; ?>"
+                                    data-active="<?php echo $tier->is_active; ?>">
+                                <?php echo $tier->is_active ? __('Deactivate', 'wplcs') : __('Activate', 'wplcs'); ?>
+                            </button>
+                            
+                            <button type="button" class="button button-danger wplcs-delete-tier" 
+                                    data-tier-id="<?php echo $tier->id; ?>">
+                                <?php _e('Delete', 'wplcs'); ?>
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        
+        <style>
+        .wplcs-tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .wplcs-tier-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .wplcs-tier-card.active {
+            border-left: 4px solid #00a32a;
+        }
+        
+        .wplcs-tier-card.inactive {
+            opacity: 0.7;
+            border-left: 4px solid #ddd;
+        }
+        
+        .wplcs-tier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .wplcs-tier-header h3 {
+            margin: 0;
+        }
+        
+        .wplcs-tier-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .wplcs-tier-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .wplcs-tier-status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .wplcs-tier-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0073aa;
+            margin-bottom: 15px;
+        }
+        
+        .wplcs-tier-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        
+        .wplcs-tier-features li {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .wplcs-tier-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .wplcs-tier-actions .button {
+            flex: 1;
+            min-width: 80px;
+        }
+        </style>
+        <?php
+    }
+    
+    /**
+     * Render resources table
+     */
+    private function render_resources_table() {
+        $resources = get_option('wplcs_resources', array());
+        
+        ?>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th><?php _e('Name', 'wplcs'); ?></th>
+                    <th><?php _e('Type', 'wplcs'); ?></th>
+                    <th><?php _e('Size', 'wplcs'); ?></th>
+                    <th><?php _e('Version', 'wplcs'); ?></th>
+                    <th><?php _e('Assigned Tiers', 'wplcs'); ?></th>
+                    <th><?php _e('Actions', 'wplcs'); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($resources)): ?>
+                    <tr>
+                        <td colspan="6"><?php _e('No resources found. Upload some resources to get started.', 'wplcs'); ?></td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($resources as $resource_id => $resource): ?>
+                        <tr>
+                            <td>
+                                <strong><?php echo esc_html($resource['name']); ?></strong>
+                                <?php if (!empty($resource['description'])): ?>
+                                    <br><small><?php echo esc_html($resource['description']); ?></small>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <span class="wplcs-resource-type"><?php echo esc_html(ucfirst($resource['type'])); ?></span>
+                            </td>
+                            <td>
+                                <?php 
+                                if (isset($resource['size']) && $resource['size'] > 0) {
+                                    echo size_format($resource['size']);
+                                } else {
+                                    echo '—';
+                                }
+                                ?>
+                            </td>
+                            <td><?php echo isset($resource['version']) ? esc_html($resource['version']) : '1.0.0'; ?></td>
+                            <td>
+                                <?php
+                                $assigned_tiers = array();
+                                $tokens = new \WPLCS\Core\Tokens();
+                                $all_tiers = $tokens->get_tiers();
+                                
+                                foreach ($all_tiers as $tier) {
+                                    $tier_resources = get_option('wplcs_tier_resources_' . $tier->id, array());
+                                    foreach ($tier_resources as $tier_resource) {
+                                        if ($tier_resource['id'] === $resource_id) {
+                                            $assigned_tiers[] = $tier->name;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                echo !empty($assigned_tiers) ? implode(', ', $assigned_tiers) : __('None', 'wplcs');
+                                ?>
+                            </td>
+                            <td>
+                                <button type="button" class="button button-small wplcs-edit-resource" 
+                                        data-resource-id="<?php echo esc_attr($resource_id); ?>">
+                                    <?php _e('Edit', 'wplcs'); ?>
+                                </button>
+                                
+                                <button type="button" class="button button-small button-danger wplcs-delete-resource" 
+                                        data-resource-id="<?php echo esc_attr($resource_id); ?>">
+                                    <?php _e('Delete', 'wplcs'); ?>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+        
+        <style>
+        .wplcs-resource-type {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        </style>
+        <?php
+    }
+    
+    /**
+     * Render logs table
+     */
+    private function render_logs_table() {
+        global $wpdb;
+        $database = new \WPLCS\Core\Database();
+        $logs_table = $database->get_table('logs');
+        
+        // Get filter values
+        $action_filter = isset($_GET['action_filter']) ? sanitize_text_field($_GET['action_filter']) : '';
+        $date_from = isset($_GET['date_from']) ? sanitize_text_field($_GET['date_from']) : '';
+        $date_to = isset($_GET['date_to']) ? sanitize_text_field($_GET['date_to']) : '';
+        
+        // Build query
+        $where_clauses = array('1=1');
+        $params = array();
+        
+        if ($action_filter) {
+            $where_clauses[] = "action = %s";
+            $params[] = $action_filter;
+        }
+        
+        if ($date_from) {
+            $where_clauses[] = "DATE(created_at) >= %s";
+            $params[] = $date_from;
+        }
+        
+        if ($date_to) {
+            $where_clauses[] = "DATE(created_at) <= %s";
+            $params[] = $date_to;
+        }
+        
+        $where_clause = implode(' AND ', $where_clauses);
+        
+        $logs = $wpdb->get_results($wpdb->prepare(
+            "SELECT l.*, u.user_login, u.display_name
+             FROM {$logs_table} l
+             LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID
+             WHERE {$where_clause}
+             ORDER BY l.created_at DESC
+             LIMIT 200",
+            $params
+        ));
+        
+        ?>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th><?php _e('Date/Time', 'wplcs'); ?></th>
+                    <th><?php _e('User', 'wplcs'); ?></th>
+                    <th><?php _e('Action', 'wplcs'); ?></th>
+                    <th><?php _e('Resource', 'wplcs'); ?></th>
+                    <th><?php _e('IP Address', 'wplcs'); ?></th>
+                    <th><?php _e('Response', 'wplcs'); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($logs)): ?>
+                    <tr>
+                        <td colspan="6"><?php _e('No logs found.', 'wplcs'); ?></td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($logs as $log): ?>
+                        <tr>
+                            <td><?php echo date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($log->created_at)); ?></td>
+                            <td>
+                                <?php if ($log->user_login): ?>
+                                    <strong><?php echo esc_html($log->display_name); ?></strong><br />
+                                    <small><?php echo esc_html($log->user_login); ?></small>
+                                <?php else: ?>
+                                    <em><?php _e('Unknown', 'wplcs'); ?></em>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <span class="wplcs-action-<?php echo esc_attr(str_replace('_', '-', $log->action)); ?>">
+                                    <?php echo esc_html(ucwords(str_replace('_', ' ', $log->action))); ?>
+                                </span>
+                            </td>
+                            <td><?php echo $log->resource ? esc_html($log->resource) : '—'; ?></td>
+                            <td><?php echo esc_html($log->ip_address); ?></td>
+                            <td>
+                                <?php if ($log->response_code): ?>
+                                    <span class="wplcs-response-code response-<?php echo intval($log->response_code); ?>">
+                                        <?php echo intval($log->response_code); ?>
+                                    </span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                                
+                                <?php if ($log->error_message): ?>
+                                    <br><small class="wplcs-error"><?php echo esc_html($log->error_message); ?></small>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+        
+        <style>
+        .wplcs-response-code {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .response-200 { background: #d4edda; color: #155724; }
+        .response-400 { background: #fff3cd; color: #856404; }
+        .response-401, .response-403 { background: #f8d7da; color: #721c24; }
+        .response-404 { background: #e2e3e5; color: #383d41; }
+        .response-429 { background: #d1ecf1; color: #0c5460; }
+        .response-500 { background: #f8d7da; color: #721c24; }
+        
+        .wplcs-error {
+            color: #dc3545;
+            font-style: italic;
+        }
+        
+        .wplcs-action-token-created { color: #28a745; }
+        .wplcs-action-session-created { color: #007bff; }
+        .wplcs-action-resource-access { color: #6f42c1; }
+        .wplcs-action-token-deactivated { color: #dc3545; }
+        .wplcs-action-session-deactivated { color: #fd7e14; }
+        </style>
+        <?php
+    }
 }

@@ -218,27 +218,18 @@ class Sessions {
     /**
      * Get user sessions
      */
-    public function get_user_sessions($user_id, $active_only = true) {
+    public function get_user_sessions($user_id) {
         global $wpdb;
         $sessions_table = $this->database->get_table('sessions');
         $tokens_table = $this->database->get_table('tokens');
         
-        $where_clause = "t.user_id = %d";
-        $params = array($user_id);
-        
-        if ($active_only) {
-            $where_clause .= " AND s.is_active = 1 AND s.expires_at > %s AND t.is_active = 1";
-            $params[] = current_time('mysql');
-        }
-        
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT s.*, t.tier_id, tier.name as tier_name
+            "SELECT s.*, t.user_id 
              FROM {$sessions_table} s
              JOIN {$tokens_table} t ON s.token_id = t.id
-             JOIN {$this->database->get_table('tiers')} tier ON t.tier_id = tier.id
-             WHERE {$where_clause}
+             WHERE t.user_id = %d
              ORDER BY s.last_activity DESC",
-            $params
+            $user_id
         ));
     }
     
@@ -247,52 +238,39 @@ class Sessions {
      */
     public function deactivate_session($session_id, $user_id = null) {
         global $wpdb;
-        $table = $this->database->get_table('sessions');
+        $sessions_table = $this->database->get_table('sessions');
+        $tokens_table = $this->database->get_table('tokens');
         
-        // Get session info before deactivating
-        $session = $wpdb->get_row($wpdb->prepare(
-            "SELECT s.*, t.user_id as token_user_id
-             FROM {$table} s
-             JOIN {$this->database->get_table('tokens')} t ON s.token_id = t.id
-             WHERE s.id = %d",
-            $session_id
-        ));
-        
-        if (!$session) {
-            return false;
+        // Verify session belongs to user if user_id provided
+        if ($user_id) {
+            $session = $wpdb->get_row($wpdb->prepare(
+                "SELECT s.*, t.user_id 
+                 FROM {$sessions_table} s
+                 JOIN {$tokens_table} t ON s.token_id = t.id
+                 WHERE s.id = %d AND t.user_id = %d",
+                $session_id, $user_id
+            ));
+            
+            if (!$session) {
+                return false;
+            }
         }
         
-        // Check user permission
-        if ($user_id && $session->token_user_id != $user_id) {
-            return false;
-        }
-        
-        // Deactivate session
-        $result = $wpdb->update(
-            $table,
-            array('is_active' => 0),
-            array('id' => $session_id)
+        $updated = $wpdb->update(
+            $sessions_table,
+            array(
+                'is_active' => 0,
+                'updated_at' => current_time('mysql')
+            ),
+            array('id' => $session_id),
+            array('%d', '%s'),
+            array('%d')
         );
         
-        if ($result !== false) {
-            // Update current nodes count in token
-            $tokens_table = $this->database->get_table('tokens');
-            $active_sessions = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$table} WHERE token_id = %d AND is_active = 1",
-                $session->token_id
-            ));
-            
-            $wpdb->update(
-                $tokens_table,
-                array('current_nodes' => $active_sessions),
-                array('id' => $session->token_id)
-            );
-            
-            // Log session deactivation
-            $this->log_action($session->token_id, $session->session_id, $session->token_user_id, 'session_deactivated', array(
-                'node_domain' => $session->node_domain
-            ));
-            
+        if ($updated) {
+            // Log the deactivation
+            $tokens = new Tokens();
+            $tokens->log_action($user_id ?: 0, 'session_deactivated', null, 200, $session_id);
             return true;
         }
         

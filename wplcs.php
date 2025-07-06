@@ -60,6 +60,11 @@ final class WPLCS {
     public $dashboard;
     public $admin;
     public $security;
+    public $shortcodes;
+    public $shortcode_ajax;
+    public $admin_panel;
+    public $admin_plans;
+    public $admin_users;
     
     /**
      * Get plugin instance
@@ -162,26 +167,34 @@ final class WPLCS {
     }
     
     /**
-     * Initialize components
+     * Initialize plugin components
      */
     private function init_components() {
-        // Database handler
-        $this->database = new WPLCS\Core\Database();
-        
         // Core components
-        $this->tokens = new WPLCS\Core\Tokens();
-        $this->sessions = new WPLCS\Core\Sessions();
-        $this->security = new WPLCS\Core\Security();
+        $this->database = new Core\Database();
+        $this->tokens = new Core\Tokens();
+        $this->sessions = new Core\Sessions();
+        $this->security = new Core\Security();
         
-        // Integration components
-        $this->woocommerce = new WPLCS\Includes\WooCommerce_Integration();
+        // API
+        $this->api = new Endpoints\API();
         
-        // API components
-        $this->api = new WPLCS\Endpoints\API();
+        // Integration
+        $this->woocommerce = new Includes\WooCommerce_Integration();
         
         // UI components
-        $this->dashboard = new WPLCS\UI\Dashboard();
-        $this->admin = new WPLCS\Admin\Admin_Panel();
+        $this->dashboard = new UI\Dashboard();
+        
+        // New UI components
+        $this->shortcodes = new UI\Shortcodes();
+        $this->shortcode_ajax = new UI\Shortcode_Ajax();
+        
+        // Admin components
+        $this->admin_panel = new Admin\Admin_Panel();
+        
+        // New Admin components
+        $this->admin_plans = new Admin\Admin_Plans();
+        $this->admin_users = new Admin\Admin_Users();
     }
     
     /**
@@ -196,7 +209,9 @@ final class WPLCS {
         $this->woocommerce->init();
         $this->api->init();
         $this->dashboard->init();
-        $this->admin->init();
+        $this->admin_panel->init();
+        $this->admin_plans->init();
+        $this->admin_users->init();
     }
     
     /**
