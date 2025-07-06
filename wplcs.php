@@ -116,7 +116,33 @@ final class WPLCS {
         }
         
         $relative_class = substr($class, $len);
-        $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+        
+        // Map namespace parts to correct directory structure
+        $namespace_parts = explode('\\', $relative_class);
+        
+        if (count($namespace_parts) >= 2) {
+            $namespace = $namespace_parts[0];
+            $class_name = $namespace_parts[1];
+            
+            // Map namespaces to directories
+            $directory_map = array(
+                'Core' => 'core',
+                'Admin' => 'admin',
+                'Endpoints' => 'endpoints',
+                'Includes' => 'includes',
+                'UI' => 'ui'
+            );
+            
+            if (isset($directory_map[$namespace])) {
+                $file = $base_dir . $directory_map[$namespace] . '/' . $class_name . '.php';
+            } else {
+                // Fallback to original behavior
+                $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+            }
+        } else {
+            // Single level namespace, use lowercase
+            $file = $base_dir . strtolower($relative_class) . '.php';
+        }
         
         if (file_exists($file)) {
             require $file;
@@ -171,47 +197,64 @@ final class WPLCS {
      */
     private function init_components() {
         // Core components
-        $this->database = new Core\Database();
-        $this->tokens = new Core\Tokens();
-        $this->sessions = new Core\Sessions();
-        $this->security = new Core\Security();
+        $this->database = new WPLCS\Core\Database();
+        $this->tokens = new WPLCS\Core\Tokens();
+        $this->sessions = new WPLCS\Core\Sessions();
+        $this->security = new WPLCS\Core\Security();
         
         // API
-        $this->api = new Endpoints\API();
+        $this->api = new WPLCS\Endpoints\API();
         
         // Integration
-        $this->woocommerce = new Includes\WooCommerce_Integration();
+        $this->woocommerce = new WPLCS\Includes\WooCommerce_Integration();
         
         // UI components
-        $this->dashboard = new UI\Dashboard();
+        $this->dashboard = new WPLCS\UI\Dashboard();
         
         // New UI components
-        $this->shortcodes = new UI\Shortcodes();
-        $this->shortcode_ajax = new UI\Shortcode_Ajax();
+        $this->shortcodes = new WPLCS\UI\Shortcodes();
+        $this->shortcode_ajax = new WPLCS\UI\Shortcode_Ajax();
         
         // Admin components
-        $this->admin_panel = new Admin\Admin_Panel();
+        $this->admin_panel = new WPLCS\Admin\Admin_Panel();
         
         // New Admin components
-        $this->admin_plans = new Admin\Admin_Plans();
-        $this->admin_users = new Admin\Admin_Users();
+        $this->admin_plans = new WPLCS\Admin\Admin_Plans();
+        $this->admin_users = new WPLCS\Admin\Admin_Users();
     }
     
     /**
      * Initialize component hooks
      */
     private function init_component_hooks() {
-        // Initialize each component
-        $this->database->init();
-        $this->tokens->init();
-        $this->sessions->init();
-        $this->security->init();
-        $this->woocommerce->init();
-        $this->api->init();
-        $this->dashboard->init();
-        $this->admin_panel->init();
-        $this->admin_plans->init();
-        $this->admin_users->init();
+        // Initialize core components that have init() methods
+        if (method_exists($this->database, 'init')) {
+            $this->database->init();
+        }
+        if (method_exists($this->tokens, 'init')) {
+            $this->tokens->init();
+        }
+        if (method_exists($this->sessions, 'init')) {
+            $this->sessions->init();
+        }
+        if (method_exists($this->security, 'init')) {
+            $this->security->init();
+        }
+        if (method_exists($this->woocommerce, 'init')) {
+            $this->woocommerce->init();
+        }
+        if (method_exists($this->api, 'init')) {
+            $this->api->init();
+        }
+        if (method_exists($this->dashboard, 'init')) {
+            $this->dashboard->init();
+        }
+        if (method_exists($this->admin_panel, 'init')) {
+            $this->admin_panel->init();
+        }
+        
+        // New components (shortcodes, admin_plans, admin_users) 
+        // are initialized in their constructors, no init() method needed
     }
     
     /**
