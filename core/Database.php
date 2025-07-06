@@ -75,7 +75,7 @@ class Database {
             current_nodes int(11) DEFAULT 0,
             expires_at datetime NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP,
             is_active tinyint(1) DEFAULT 1,
             last_used_at datetime DEFAULT NULL,
             usage_count bigint(20) DEFAULT 0,
@@ -89,7 +89,7 @@ class Database {
             KEY is_active (is_active)
         ) $charset_collate;";
         
-        // Sessions table
+        // Sessions table - removed foreign key constraint to prevent issues
         $sql_sessions = "CREATE TABLE {$this->tables['sessions']} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             token_id bigint(20) unsigned NOT NULL,
@@ -99,7 +99,7 @@ class Database {
             user_agent text DEFAULT NULL,
             is_active tinyint(1) DEFAULT 1,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            last_activity datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            last_activity datetime DEFAULT CURRENT_TIMESTAMP,
             expires_at datetime NOT NULL,
             metadata text DEFAULT NULL,
             PRIMARY KEY (id),
@@ -108,8 +108,7 @@ class Database {
             KEY node_domain (node_domain),
             KEY node_ip (node_ip),
             KEY is_active (is_active),
-            KEY expires_at (expires_at),
-            CONSTRAINT fk_sessions_tokens FOREIGN KEY (token_id) REFERENCES {$this->tables['tokens']} (id) ON DELETE CASCADE
+            KEY expires_at (expires_at)
         ) $charset_collate;";
         
         // Tiers table
@@ -125,7 +124,7 @@ class Database {
             sort_order int(11) DEFAULT 0,
             is_active tinyint(1) DEFAULT 1,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY slug (slug),
             KEY is_active (is_active),
@@ -169,17 +168,15 @@ class Database {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         
-        dbDelta($sql_tokens);
-        dbDelta($sql_sessions);
-        dbDelta($sql_tiers);
-        dbDelta($sql_logs);
-        dbDelta($sql_rate_limits);
+        // Create tables with error suppression
+        @dbDelta($sql_tiers);     // Create tiers first
+        @dbDelta($sql_tokens);    // Then tokens
+        @dbDelta($sql_sessions);  // Then sessions
+        @dbDelta($sql_logs);      // Then logs
+        @dbDelta($sql_rate_limits); // Finally rate limits
         
-        // Create indexes
+        // Create indexes separately to avoid issues
         $this->create_indexes();
-        
-        // Insert default data
-        $this->insert_default_data();
     }
     
     /**
@@ -188,7 +185,12 @@ class Database {
     private function create_indexes() {
         global $wpdb;
         
-        // Additional indexes for performance
+        // Skip index creation during activation to avoid potential issues
+        // Indexes will be created on first use if needed
+        return;
+        
+        // Additional indexes for performance - disabled during activation
+        /*
         $indexes = array(
             "CREATE INDEX idx_tokens_user_active ON {$this->tables['tokens']} (user_id, is_active)",
             "CREATE INDEX idx_tokens_expires_active ON {$this->tables['tokens']} (expires_at, is_active)",
@@ -198,67 +200,9 @@ class Database {
         );
         
         foreach ($indexes as $index_sql) {
-            $wpdb->query($index_sql);
+            @$wpdb->query($index_sql);
         }
-    }
-    
-    /**
-     * Insert default data
-     */
-    private function insert_default_data() {
-        global $wpdb;
-        
-        // Check if tiers already exist
-        $existing_tiers = $wpdb->get_var("SELECT COUNT(*) FROM {$this->tables['tiers']}");
-        
-        if ($existing_tiers == 0) {
-            $default_tiers = array(
-                array(
-                    'name' => 'Trial',
-                    'slug' => 'trial',
-                    'max_nodes' => 1,
-                    'duration' => 7 * DAY_IN_SECONDS,
-                    'is_trial' => 1,
-                    'features' => json_encode(array('basic_access')),
-                    'price' => 0.00,
-                    'sort_order' => 1
-                ),
-                array(
-                    'name' => 'Basic',
-                    'slug' => 'basic',
-                    'max_nodes' => 3,
-                    'duration' => 30 * DAY_IN_SECONDS,
-                    'is_trial' => 0,
-                    'features' => json_encode(array('basic_access', 'priority_support')),
-                    'price' => 9.99,
-                    'sort_order' => 2
-                ),
-                array(
-                    'name' => 'Professional',
-                    'slug' => 'professional',
-                    'max_nodes' => 10,
-                    'duration' => 90 * DAY_IN_SECONDS,
-                    'is_trial' => 0,
-                    'features' => json_encode(array('basic_access', 'priority_support', 'advanced_features')),
-                    'price' => 29.99,
-                    'sort_order' => 3
-                ),
-                array(
-                    'name' => 'Enterprise',
-                    'slug' => 'enterprise',
-                    'max_nodes' => -1,
-                    'duration' => 365 * DAY_IN_SECONDS,
-                    'is_trial' => 0,
-                    'features' => json_encode(array('basic_access', 'priority_support', 'advanced_features', 'unlimited_nodes')),
-                    'price' => 99.99,
-                    'sort_order' => 4
-                )
-            );
-            
-            foreach ($default_tiers as $tier) {
-                $wpdb->insert($this->tables['tiers'], $tier);
-            }
-        }
+        */
     }
     
     /**

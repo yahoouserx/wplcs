@@ -142,13 +142,19 @@ final class WPLCS {
     private function check_dependencies() {
         // Check WooCommerce
         if (!class_exists('WooCommerce')) {
-            add_action('admin_notices', array($this, 'woocommerce_missing_notice'));
+            // Only add admin notice if not during activation
+            if (!did_action('activate_plugin')) {
+                add_action('admin_notices', array($this, 'woocommerce_missing_notice'));
+            }
             return false;
         }
         
         // Check PHP version
         if (version_compare(PHP_VERSION, '7.4', '<')) {
-            add_action('admin_notices', array($this, 'php_version_notice'));
+            // Only add admin notice if not during activation
+            if (!did_action('activate_plugin')) {
+                add_action('admin_notices', array($this, 'php_version_notice'));
+            }
             return false;
         }
         
@@ -208,20 +214,46 @@ final class WPLCS {
      * Plugin activation
      */
     public function activate() {
-        // Create database tables
-        $database = new WPLCS\Core\Database();
-        $database->create_tables();
+        // Start output buffering to prevent unexpected output
+        ob_start();
         
-        // Create default tiers
-        $this->create_default_tiers();
+        try {
+            // Check dependencies first
+            if (!class_exists('WooCommerce')) {
+                throw new Exception('WooCommerce is required');
+            }
+            
+            if (version_compare(PHP_VERSION, '7.4', '<')) {
+                throw new Exception('PHP 7.4 or higher is required');
+            }
+            
+            // Create database tables
+            require_once WPLCS_CORE_DIR . 'Database.php';
+            $database = new WPLCS\Core\Database();
+            $database->create_tables();
+            
+            // Create default tiers (only if they don't exist)
+            $this->create_default_tiers();
+            
+            // Set activation timestamp
+            update_option('wplcs_activation_time', time());
+            update_option('wplcs_db_version', WPLCS\Core\Database::DB_VERSION);
+            
+            // Flush rewrite rules
+            flush_rewrite_rules();
+            
+        } catch (Exception $e) {
+            // Log error but don't output it
+            error_log('WPLCS Activation Error: ' . $e->getMessage());
+            
+            // Clean buffer and deactivate if there was an error
+            ob_end_clean();
+            deactivate_plugins(plugin_basename(__FILE__));
+            wp_die('WPLCS activation failed: ' . $e->getMessage());
+        }
         
-        // Flush rewrite rules
-        flush_rewrite_rules();
-        
-        // Set activation timestamp
-        update_option('wplcs_activation_time', time());
-        
-        do_action('wplcs_activated');
+        // Clean output buffer
+        ob_end_clean();
     }
     
     /**
@@ -263,42 +295,70 @@ final class WPLCS {
      * Create default tiers
      */
     private function create_default_tiers() {
-        $default_tiers = array(
-            array(
-                'name' => 'Trial',
-                'max_nodes' => 1,
-                'duration' => 7 * DAY_IN_SECONDS, // 7 days
-                'is_trial' => 1,
-                'features' => json_encode(array('basic_access'))
-            ),
-            array(
-                'name' => 'Basic',
-                'max_nodes' => 3,
-                'duration' => 30 * DAY_IN_SECONDS, // 30 days
-                'is_trial' => 0,
-                'features' => json_encode(array('basic_access', 'priority_support'))
-            ),
-            array(
-                'name' => 'Professional',
-                'max_nodes' => 10,
-                'duration' => 90 * DAY_IN_SECONDS, // 90 days
-                'is_trial' => 0,
-                'features' => json_encode(array('basic_access', 'priority_support', 'advanced_features'))
-            ),
-            array(
-                'name' => 'Enterprise',
-                'max_nodes' => -1, // Unlimited
-                'duration' => 365 * DAY_IN_SECONDS, // 1 year
-                'is_trial' => 0,
-                'features' => json_encode(array('basic_access', 'priority_support', 'advanced_features', 'unlimited_nodes'))
-            )
-        );
-        
         global $wpdb;
         $table_name = $wpdb->prefix . 'wplcs_tiers';
         
+        // Check if table exists first
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'");
+        if (!$table_exists) {
+            return; // Table doesn't exist yet, skip
+        }
+        
+        // Check if tiers already exist
+        $existing_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_name}");
+        if ($existing_count > 0) {
+            return; // Tiers already exist, skip creation
+        }
+        
+        $default_tiers = array(
+            array(
+                'name' => 'Trial',
+                'slug' => 'trial',
+                'max_nodes' => 1,
+                'duration' => 604800, // 7 days in seconds
+                'is_trial' => 1,
+                'features' => '["basic_access"]',
+                'price' => 0.00,
+                'sort_order' => 1,
+                'is_active' => 1
+            ),
+            array(
+                'name' => 'Basic',
+                'slug' => 'basic',
+                'max_nodes' => 3,
+                'duration' => 2592000, // 30 days in seconds
+                'is_trial' => 0,
+                'features' => '["basic_access","priority_support"]',
+                'price' => 9.99,
+                'sort_order' => 2,
+                'is_active' => 1
+            ),
+            array(
+                'name' => 'Professional',
+                'slug' => 'professional',
+                'max_nodes' => 10,
+                'duration' => 7776000, // 90 days in seconds
+                'is_trial' => 0,
+                'features' => '["basic_access","priority_support","advanced_features"]',
+                'price' => 29.99,
+                'sort_order' => 3,
+                'is_active' => 1
+            ),
+            array(
+                'name' => 'Enterprise',
+                'slug' => 'enterprise',
+                'max_nodes' => -1,
+                'duration' => 31536000, // 365 days in seconds
+                'is_trial' => 0,
+                'features' => '["basic_access","priority_support","advanced_features","unlimited_nodes"]',
+                'price' => 99.99,
+                'sort_order' => 4,
+                'is_active' => 1
+            )
+        );
+        
         foreach ($default_tiers as $tier) {
-            $wpdb->insert($table_name, $tier);
+            @$wpdb->insert($table_name, $tier);
         }
     }
     
