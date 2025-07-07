@@ -1,0 +1,96 @@
+Build a WordPress plugin named `wplcs` (WordPress License Control System) with the following comprehensive features and requirements:
+
+---
+
+### Core Features:
+
+1. **WooCommerce Integration:**  
+   - Automatically generate license tokens after order completion.  
+   - Attach license plans (tiers) to WooCommerce products.  
+   - Support trial licenses, renewals, and upgrades.
+
+2. **License & Site Management:**  
+   - Define license plans with: name, price, max allowed sites, duration, trial flag, active status, upgrade paths, and custom JSON features.  
+   - Enforce domain/site activation limits per license.  
+   - Allow users to activate/deactivate sites linked to their licenses.  
+   - Expiration date tracking and renewal management.  
+   - Restrict download access to licensed users tied to domain, token, session, and optionally cookies/IP.
+
+3. **User Dashboard (My Account):**  
+   - Add a shortcode (e.g. `[wplcs_account_dashboard]`) for license management inside WooCommerce My Account page.  
+   - Users can view active licenses, site activations, expiration, upgrade options, and download products securely.
+
+4. **Admin Panel:**  
+   - Manage license plans (create/edit/delete, activate/deactivate).  
+   - View all users and their license tokens, activation domains, expiration status.  
+   - Manage site activations per license.  
+   - View logs of activations, renewals, downloads, and errors.  
+   - Release/Resource manager to upload and version product files.  
+   - UI should be clean, tabbed, and user-friendly.
+
+5. **REST API Endpoints:**  
+   - Support activation, validation, deactivation, license status, and resource fetching via secure REST API endpoints.  
+   - Use token-based authentication with rate limiting.
+
+6. **Auto-update Mechanism:**  
+   - Implement an update server and endpoints for the plugin to support automatic updates for licensed users.
+
+7. **Security & Best Practices:**  
+   - Use WordPress nonces and capability checks.  
+   - Sanitize and validate all input/output.  
+   - Secure file downloads (signed URLs or session+cookie verification).  
+   - Follow PSR-4 autoloading and OOP design patterns.  
+   - Prepare plugin for translation (i18n).
+
+8. **Documentation:**  
+   - Include a `/docs/user-guide.md` file with:  
+     - Installation and activation steps  
+     - How to create/manage plans  
+     - WooCommerce integration guide  
+     - User dashboard usage  
+     - Admin panel overview  
+     - API documentation with examples  
+     - Troubleshooting and FAQ
+
+---
+
+### Bugfixes & Improvements:
+
+- Fix fatal errors related to missing methods in `Admin_Panel.php`:  
+  - `render_sessions_list()`  
+  - `render_tiers_list()`  
+  - `render_resources_table()`  
+  - `render_logs_table()`
+
+- Improve admin UI design and responsiveness.
+
+---
+
+### Technical Details & Structure:
+
+- Compatible with WordPress 5.0+, PHP 7.4+  
+- Use custom database tables for licenses, activations, tokens, logs, and resources.  
+- Plugin folder structure: `/includes`, `/admin`, `/core`, `/api`, `/ui`, `/assets`, `/docs`  
+- Use WordPress hooks and filters to integrate with WooCommerce lifecycle.  
+- Provide shortcode(s) for front-end display.  
+- Implement user roles and capabilities as needed.  
+- Logging for all license activations, renewals, and errors.
+
+---
+
+### Testing Guidelines (Bonus):
+
+- Plugin installs and activates cleanly with no errors.  
+- Database tables created as expected.  
+- License plan CRUD operations work correctly.  
+- WooCommerce purchase generates licenses automatically.  
+- Users can manage licenses and activations on the front-end.  
+- Admin views all necessary data with no crashes.  
+- REST API endpoints respond correctly and securely.  
+- Download restrictions are enforced.  
+- Trial and renewal flows operate as documented.  
+- UI responsive and user-friendly.
+
+---
+
+Begin by scaffolding the plugin files, creating the database schema, and implementing WooCommerce hooks for license issuance. Then build REST API endpoints and user/admin dashboards incrementally.
